@@ -2,11 +2,11 @@
 
 **一个完全本地的批量照片签名水印工具。** 替代 Lightroom 的水印导出环节：导入照片、调好水印、批量导出，照片不离开你的电脑。
 
-**A fully local batch photo watermarking tool, built for signature watermarks.** Import photos, place your watermark, batch-export — your photos never leave your machine.
+**A fully local batch photo watermarking tool — a lightweight Lightroom watermark alternative built for signature watermarks.** Import photos, place your watermark, batch-export — your photos never leave your machine.
 
 by **SatoriAx**
 
-![screenshot](docs/screenshot.jpg)
+![demo](docs/demo.gif)
 
 ---
 
