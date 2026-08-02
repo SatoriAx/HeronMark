@@ -1,0 +1,13 @@
+{
+  "name": "heronmark",
+  "private": true,
+  "version": "0.1.0",
+  "description": "鹭印 HeronMark - 本地批量照片水印工具",
+  "scripts": {
+    "tauri": "tauri",
+    "build:exe": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鹭印 HeronMark</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════════ 顶栏 ══════════ -->
+  <header id="topbar">
+    <div id="brand" data-tauri-drag-region>
+      <span id="app-title">鹭印</span>
+      <span id="app-sub">HeronMark</span>
+    </div>
+    <div id="topbar-drag" data-tauri-drag-region></div>
+    <div id="topbar-actions">
+      <button id="btn-import-files" class="btn">导入图片</button>
+      <button id="btn-import-folder" class="btn">导入文件夹</button>
+      <button id="btn-export" class="btn btn-primary">批量导出</button>
+    </div>
+    <div id="win-controls">
+      <button id="win-min" class="win-btn" title="最小化">–</button>
+      <button id="win-max" class="win-btn" title="最大化 / 还原">□</button>
+      <button id="win-close" class="win-btn win-close" title="关闭">✕</button>
+    </div>
+    <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.webp" multiple hidden>
+    <input type="file" id="folder-input" webkitdirectory hidden>
+  </header>
+
+  <div id="main">
+
+    <!-- ══════════ 左：缩略图栏 ══════════ -->
+    <aside id="rail">
+      <div id="rail-toolbar">
+        <span id="photo-count">0 张</span>
+        <button id="btn-select-all" class="btn btn-ghost">全选</button>
+        <button id="btn-clear" class="btn btn-ghost">清空</button>
+      </div>
+      <div id="photo-list">
+        <!-- 缩略图子项模板（JS 克隆用）：
+        <div class="photo-item" data-id="">
+          <img class="photo-thumb" src="" alt="">
+          <span class="photo-name">IMG_0001.jpg</span>
+          <span class="photo-status"></span>
+          <span class="photo-suggest"></span>
+        </div> -->
+        <div id="rail-empty">
+          <p>把照片拖到这里</p>
+          <p class="dim">或用右上角按钮导入</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ══════════ 中：画布 ══════════ -->
+    <section id="stage">
+      <div id="preview-stage">
+        <canvas id="preview-canvas"></canvas>
+        <div id="stage-empty" class="dim">导入照片后在此预览水印效果</div>
+      </div>
+      <div id="stage-toolbar">
+        <button id="btn-prev-photo" class="btn btn-ghost">← 上一张</button>
+        <span id="photo-info" class="dim"></span>
+        <button id="btn-next-photo" class="btn btn-ghost">下一张 →</button>
+        <span class="spacer"></span>
+        <button id="zoom-fit" class="btn btn-ghost">适应窗口</button>
+        <button id="zoom-100" class="btn btn-ghost">100%</button>
+        <span id="zoom-label" class="dim"></span>
+      </div>
+    </section>
+
+    <!-- ══════════ 右：控制面板 ══════════ -->
+    <aside id="panel">
+
+      <section class="panel-section">
+        <h3>水印素材</h3>
+        <div id="preset-list">
+          <!-- 内置预设卡与自定义水印卡均由 JS 生成至此 -->
+        </div>
+        <p id="preset-empty-hint" class="hint" hidden>还没有水印素材，从下方「找素材」或「导入 PNG 素材」开始</p>
+        <div class="row">
+          <button id="btn-import-mark" class="btn">导入 PNG 素材</button>
+          <button id="btn-find-assets" class="btn" title="从开源图标库搜索水印素材">找素材</button>
+        </div>
+        <input type="file" id="mark-input" accept=".png" hidden>
+      </section>
+
+      <section class="panel-section">
+        <h3>位置</h3>
+        <div id="anchor-grid">
+          <button data-anchor="tl" title="左上"></button><button data-anchor="tc" title="上中"></button><button data-anchor="tr" title="右上"></button>
+          <button data-anchor="cl" title="左中"></button><button data-anchor="cc" title="正中"></button><button data-anchor="cr" title="右中"></button>
+          <button data-anchor="bl" title="左下"></button><button data-anchor="bc" title="底部正中" class="active"></button><button data-anchor="br" title="右下"></button>
+        </div>
+        <label class="slider-row">水平偏移 <input type="range" id="offset-x" min="-500" max="500" value="0"><span id="offset-x-val">0</span></label>
+        <label class="slider-row">垂直偏移 <input type="range" id="offset-y" min="-500" max="500" value="0"><span id="offset-y-val">0</span></label>
+        <p class="hint">也可以直接在预览图上拖拽水印</p>
+      </section>
+
+      <section class="panel-section">
+        <h3>样式</h3>
+        <label class="slider-row">大小 <input type="range" id="size-pct" min="5" max="60" value="15"><span id="size-pct-val">15%</span></label>
+        <label class="slider-row">不透明度 <input type="range" id="opacity" min="10" max="100" value="100"><span id="opacity-val">100%</span></label>
+        <label class="slider-row">旋转 <input type="range" id="rotation" min="-45" max="45" value="0"><span id="rotation-val">0°</span></label>
+        <label class="check-row"><input type="checkbox" id="glow-toggle" checked> 柔和发光<span class="hint">（细笔画在亮背景上更清晰）</span></label>
+        <label class="slider-row">发光强度 <input type="range" id="glow-strength" min="0" max="100" value="20"><span id="glow-strength-val">20</span></label>
+      </section>
+
+      <section class="panel-section">
+        <h3>批量</h3>
+        <label class="check-row"><input type="checkbox" id="apply-all" checked> 所有照片使用同一套设置</label>
+        <button id="btn-reset-photo" class="btn btn-ghost" disabled>当前照片恢复全局设置</button>
+        <label class="check-row"><input type="checkbox" id="smart-avoid" title="导入时自动检测主体位置，避让建议在缩略图上标记，点击徽章应用"> 智能避让<span class="hint">（检测主体，建议不压鸟的位置）</span></label>
+      </section>
+
+      <section class="panel-section">
+        <h3>导出</h3>
+        <label class="field-row">格式
+          <select id="export-format">
+            <option value="follow" selected>跟随原图</option>
+            <option value="jpg">JPG</option>
+            <option value="png">PNG</option>
+          </select>
+        </label>
+        <label class="slider-row">JPG 质量 <input type="range" id="jpg-quality" min="60" max="100" value="90"><span id="jpg-quality-val">90</span></label>
+        <label class="field-row">长边缩放
+          <select id="resize-long-edge">
+            <option value="0" selected>不缩放</option>
+            <option value="2048">2048 px</option>
+            <option value="2560">2560 px</option>
+            <option value="4096">4096 px</option>
+          </select>
+        </label>
+        <label class="field-row">文件名
+          <input type="text" id="filename-template" value="{name}_wm" spellcheck="false">
+        </label>
+        <p class="hint">{name} 原名 · {seq} 序号 · {date} 日期</p>
+        <button id="btn-choose-output" class="btn">选择输出文件夹</button>
+        <p id="output-path-label" class="hint">未选择（导出时会询问）</p>
+      </section>
+
+    </aside>
+  </div>
+
+  <!-- ══════════ 底：状态栏 ══════════ -->
+  <footer id="statusbar">
+    <span id="status-text">就绪</span>
+    <div id="export-progress"><div id="export-progress-fill"></div></div>
+    <button id="btn-cancel-export" class="btn btn-ghost" hidden>取消导出</button>
+  </footer>
+
+  <!-- ══════════ 找素材弹窗（Iconify 开源图标库） ══════════ -->
+  <div id="find-assets-modal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <span>找素材 · 开源图标库</span>
+        <button id="find-assets-close" class="win-btn" title="关闭">✕</button>
+      </div>
+      <div class="modal-search">
+        <input type="text" id="find-assets-input" placeholder="英文关键词更准：heron / egret / bird / crane" spellcheck="false">
+        <button id="find-assets-search" class="btn btn-primary">搜索</button>
+      </div>
+      <div id="find-assets-grid" class="modal-grid"></div>
+      <!-- 签名合成：常开。不选图标就是纯签名水印；点了图标自动合成图标+签名 -->
+      <div id="modal-compose" class="modal-compose">
+        <div class="compose-row">
+          <input type="text" id="compose-text" value="SatoriAx" spellcheck="false" placeholder="签名文字">
+          <button class="font-chip active" data-font="Great Vibes" style="font-family:'Great Vibes'">Aa</button>
+          <button class="font-chip" data-font="Dancing Script" style="font-family:'Dancing Script'">Aa</button>
+          <button class="font-chip" data-font="Caveat" style="font-family:'Caveat'">Aa</button>
+          <button class="font-chip" data-font="Style Script" style="font-family:'Style Script'">Aa</button>
+          <button class="font-chip" data-font="Sacramento" style="font-family:'Sacramento'">Aa</button>
+          <button class="font-chip" data-font="Allura" style="font-family:'Allura'">Aa</button>
+          <button class="font-chip" data-font="Pinyon Script" style="font-family:'Pinyon Script'">Aa</button>
+        </div>
+        <canvas id="compose-preview" width="528" height="120"></canvas>
+        <div class="compose-sliders">
+          <label>间距 <input type="range" id="compose-gap" min="0" max="200" value="100"><span id="compose-gap-val">100</span></label>
+          <label>上下 <input type="range" id="compose-vshift" min="-60" max="60" value="0"><span id="compose-vshift-val">0</span></label>
+        </div>
+        <div class="compose-row">
+          <button id="compose-add" class="btn btn-primary">合成并添加</button>
+          <button id="compose-text-only" class="btn btn-ghost">只要签名</button>
+          <button id="compose-icon-only" class="btn btn-ghost" hidden>只要图标</button>
+        </div>
+      </div>
+      <div id="find-assets-status" class="modal-status">图标来自 Iconify 开源图标集；不选图标直接输名字，就是纯签名水印</div>
+    </div>
+  </div>
+
+</div>
+<script type="module" src="src/app.js"></script>
+</body>
+</html>

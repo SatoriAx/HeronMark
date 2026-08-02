@@ -1,0 +1,7 @@
+node_modules/
+src-tauri/target/
+dist/
+tools/
+DESIGN.md
+app/assets/presets/
+app/test-photos/
