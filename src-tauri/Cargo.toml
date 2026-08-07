@@ -1,6 +1,6 @@
 [package]
 name = "heronmark"
-version = "1.1.0"
+version = "1.1.1"
 description = "鹭印 HeronMark - 本地批量照片水印工具"
 edition = "2021"
 default-run = "heronmark"

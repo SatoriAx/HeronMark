@@ -80,19 +80,22 @@ async function onManualCheck() {
   const btn = btnEl();
   btn.disabled = true;
   btn.textContent = '检查中…';
+  showHint('正在检查更新…', []);   // 等待期反馈：按钮旁即时可见
   try {
     const r = await invoke('check_update');
     if (r && r.has_update) {
       showAvailable(r);
       setStatus(`发现新版本 v${r.latest_version}`);
     } else if (r) {
-      hideHint();
+      // 结果用 hint 胶囊条呈现（按钮旁），不再只写状态栏远端小字
+      showHint(`已是最新版本 v${r.current_version}`, [{ label: '好的', action: hideHint }]);
       setStatus(`已是最新版本 v${r.current_version}`);
     } else {
+      showHint('检查更新失败（无返回结果）', [{ label: '重试', action: onManualCheck }, { label: '忽略', action: hideHint }]);
       setStatus('检查更新失败（无返回结果）');
     }
   } catch (e) {
-    hideHint();
+    showHint('检查更新失败：' + ((e && e.message) || e), [{ label: '重试', action: onManualCheck }, { label: '忽略', action: hideHint }]);
     setStatus('检查更新失败：' + ((e && e.message) || e));
   } finally {
     btn.disabled = false;
