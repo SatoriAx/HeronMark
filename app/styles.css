@@ -265,12 +265,24 @@ input[type="range"]::-webkit-slider-thumb:hover { background: var(--accent); tra
   color: var(--text);
   font-size: 12px; white-space: nowrap;
 }
+/* hidden 属性会被上方 display:inline-flex 覆盖（作者样式优先于 UA 的 [hidden]{display:none}），必须显式补回 */
+.update-hint[hidden] { display: none; }
 .update-hint .hint-action {
   font-family: var(--font); font-size: 12px;
   background: transparent; border: none; border-radius: 999px;
   color: var(--accent); cursor: pointer; padding: 1px 8px;
 }
 .update-hint .hint-action:hover { background: rgba(217, 164, 65, 0.18); color: var(--text); }
+/* 提示条内嵌迷你进度条（与 #export-progress 同风格） */
+.hint-progress {
+  width: 120px; height: 5px; border-radius: 3px;
+  background: var(--bg-2); overflow: hidden; flex: none;
+}
+.hint-progress-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, #b9863a, var(--accent));
+  transition: width 0.2s;
+}
 .update-btn { padding: 2px 10px; font-size: 12px; }
 #export-progress {
   width: 220px; height: 5px; border-radius: 3px;

@@ -30,13 +30,24 @@ function setStatus(text) {
 }
 
 /** 非侵入提示条：文字 + 操作按钮组（statusbar 内胶囊样式） */
-function showHint(text, actions) {
+let hintToken = 0;  // 自动消失竞态防护：只有最后一次 showHint 的定时器生效
+
+function showHint(text, actions, opts) {
   const hint = hintEl();
   if (!hint) return;
+  const token = ++hintToken;
   hint.textContent = '';
   const span = document.createElement('span');
   span.textContent = text;
   hint.append(span);
+  if (opts && opts.progress) {
+    const bar = document.createElement('div');
+    bar.className = 'hint-progress';
+    const fill = document.createElement('div');
+    fill.className = 'hint-progress-fill';
+    bar.append(fill);
+    hint.append(bar);
+  }
   for (const a of actions || []) {
     const b = document.createElement('button');
     b.className = 'hint-action';
@@ -45,6 +56,22 @@ function showHint(text, actions) {
     hint.append(b);
   }
   hint.hidden = false;
+  if (opts && opts.autoHideMs) {
+    setTimeout(() => { if (token === hintToken) hideHint(); }, opts.autoHideMs);
+  }
+}
+
+/** 下载中提示条：文字 + 内嵌进度条（不自动消失，由后续状态替换） */
+function showProgressHint(text, pct) {
+  const hint = hintEl();
+  if (!hint) return;
+  if (!hint.querySelector('.hint-progress')) {
+    showHint(text, [], { progress: true });
+  }
+  const span = hint.querySelector('span');
+  if (span) span.textContent = text;
+  const fill = hint.querySelector('.hint-progress-fill');
+  if (fill) fill.style.width = Math.max(0, Math.min(100, pct || 0)) + '%';
 }
 
 function hideHint() {
@@ -54,7 +81,7 @@ function hideHint() {
 function showAvailable(result) {
   updateState.available = result;
   showHint(`发现新版本 v${result.latest_version}（当前 v${result.current_version}）`, [
-    { label: '下载', action: startDownload },
+    { label: '更新', action: startDownload },
     { label: '忽略', action: hideHint },
   ]);
 }
@@ -80,22 +107,22 @@ async function onManualCheck() {
   const btn = btnEl();
   btn.disabled = true;
   btn.textContent = '检查中…';
-  showHint('正在检查更新…', []);   // 等待期反馈：按钮旁即时可见
+  showHint('正在检查更新…', []);
   try {
     const r = await invoke('check_update');
     if (r && r.has_update) {
-      showAvailable(r);
+      showAvailable(r);   // 有新版：提示条常驻，等用户点「更新」
       setStatus(`发现新版本 v${r.latest_version}`);
     } else if (r) {
-      // 结果用 hint 胶囊条呈现（按钮旁），不再只写状态栏远端小字
-      showHint(`已是最新版本 v${r.current_version}`, [{ label: '好的', action: hideHint }]);
+      // 无更新：轻提示 2.5 秒自动消失，无需按钮
+      showHint(`已是最新版本 v${r.current_version}`, [], { autoHideMs: 2500 });
       setStatus(`已是最新版本 v${r.current_version}`);
     } else {
-      showHint('检查更新失败（无返回结果）', [{ label: '重试', action: onManualCheck }, { label: '忽略', action: hideHint }]);
+      showHint('检查更新失败（无返回结果）', [{ label: '重试', action: onManualCheck }], { autoHideMs: 6000 });
       setStatus('检查更新失败（无返回结果）');
     }
   } catch (e) {
-    showHint('检查更新失败：' + ((e && e.message) || e), [{ label: '重试', action: onManualCheck }, { label: '忽略', action: hideHint }]);
+    showHint('检查更新失败：' + ((e && e.message) || e), [{ label: '重试', action: onManualCheck }], { autoHideMs: 6000 });
     setStatus('检查更新失败：' + ((e && e.message) || e));
   } finally {
     btn.disabled = false;
@@ -107,28 +134,26 @@ async function startDownload() {
   if (!updateState.available || updateState.downloading) return;
   const { tag, latest_version: latestVersion } = updateState.available;
   updateState.downloading = true;
-  hideHint();
-  showHint(`正在下载 v${latestVersion} 0%…`, []);
+  showProgressHint(`正在下载 v${latestVersion}`, 0);
   btnEl().disabled = true;
 
   try {
     updateState.unlisten = await tauri().event.listen(PROGRESS_EVENT, (e) => {
       const { done, total } = e.payload || {};
-      const pct = total ? Math.round((done / total) * 100) : (done || 0);
-      showHint(`正在下载 v${latestVersion} ${pct}%…`, []);
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      showProgressHint(`正在下载 v${latestVersion} ${pct}%`, pct);
     });
 
     const r = await invoke('download_update', { tag });
     if (r && r.path) {
-      showHint(`下载完成（v${latestVersion}），重启应用以完成更新`, [
+      showHint(`v${latestVersion} 已下载完成，重启后生效`, [
         { label: '重启更新', action: applyUpdate },
         { label: '稍后', action: hideHint },
       ]);
       setStatus(`新版本 v${latestVersion} 已就绪`);
     }
   } catch (e) {
-    hideHint();
-    showHint('下载失败，可稍后重试', [{ label: '重试', action: startDownload }, { label: '忽略', action: hideHint }]);
+    showHint('下载失败：' + ((e && e.message) || e), [{ label: '重试', action: startDownload }], { autoHideMs: 6000 });
     setStatus('下载失败：' + ((e && e.message) || e));
   } finally {
     updateState.downloading = false;
