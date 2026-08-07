@@ -12,6 +12,7 @@ import {
 } from './render.js';
 import { analyzeAvoidance } from './avoid.js';
 import { ExportController } from './exporter.js';
+import { initUpdate } from './update.js';
 
 /* ═══════════════════ 状态模型（DESIGN.md §7.1） ═══════════════════ */
 
@@ -1521,6 +1522,8 @@ async function init() {
   });
   // 预热默认预设素材，缩短首次预览等待
   if (state.settings.preset) resolveMarkBitmap(state.settings.preset).catch(() => {});
+  // 更新检查（后台静默 + 手动入口），无 Tauri API 时自动降级
+  initUpdate();
   setStatus('就绪');
 }
 

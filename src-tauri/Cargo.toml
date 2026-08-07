@@ -1,14 +1,20 @@
 [package]
 name = "heronmark"
-version = "0.1.0"
+version = "1.1.0"
 description = "鹭印 HeronMark - 本地批量照片水印工具"
 edition = "2021"
+default-run = "heronmark"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "http2"] }
+sha2 = "0.10"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 
 [profile.release]
 opt-level = 3

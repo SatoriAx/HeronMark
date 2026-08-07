@@ -1,7 +1,8 @@
 node_modules/
 src-tauri/target/
 dist/
-tools/
+tools/*
+!tools/build-updater.ps1
 DESIGN.md
 app/assets/presets/
 app/test-photos/
